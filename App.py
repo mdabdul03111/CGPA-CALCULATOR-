@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-# Streamlit config
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 
-# Step 1: User Info
 if not st.session_state.user_submitted:
     st.title("Welcome to CGPA Calculator")
     st.markdown("### Please fill in your details:")
@@ -31,7 +29,6 @@ if not st.session_state.user_submitted:
         else:
             st.warning("Please fill all fields before proceeding.")
 
-# Step 2: CGPA Calculator
 if st.session_state.user_submitted:
     st.title("CGPA Calculator")
 
@@ -64,7 +61,7 @@ if st.session_state.user_submitted:
                         options=list(range(5, 11)),
                         key=f"score_{sem}_{course}"
                     )
-                records.append({"Semester": sem, "Credit": credit, "Score": score})
+                records.append({"Semester": sem, "Course": course, "Credit": credit, "Score": score})
 
     if st.button("Calculate CGPA"):
         df = pd.DataFrame(records)
@@ -82,56 +79,92 @@ if st.session_state.user_submitted:
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
         st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
-
         st.subheader("Semester-wise GPA")
         st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
 
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        # HTML for print view
         html = f"""
         <html>
         <head>
             <style>
                 body {{ font-family: Arial; margin: 40px; }}
-                h1 {{ text-align: center; }}
+                h1, h2 {{ text-align: center; }}
                 .page {{ page-break-after: always; }}
-                table, th, td {{ border: 1px solid black; border-collapse: collapse; padding: 8px; }}
-                th {{ background-color: #f2f2f2; }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }}
+                th, td {{
+                    border: 1px solid #000;
+                    padding: 8px;
+                    text-align: center;
+                    font-size: 14px;
+                }}
+                th {{
+                    background-color: #f2f2f2;
+                }}
+                .info p {{
+                    margin: 5px 0;
+                    font-size: 16px;
+                }}
+                .btn-container {{
+                    text-align: center;
+                    margin-top: 30px;
+                }}
+                button {{
+                    padding: 10px 20px;
+                    font-size: 16px;
+                    cursor: pointer;
+                }}
             </style>
         </head>
         <body>
             <h1>CGPA Report</h1>
-            <p><strong>Name:</strong> {user['Name']}<br>
-               <strong>College:</strong> {user['College']}<br>
-               <strong>Department:</strong> {user['Department']}<br>
-               <strong>Mobile:</strong> {user['Mobile']}<br>
-               <strong>Email:</strong> {user['Email']}<br>
-               <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
-            <div class="page">
-                <h2>Semester-wise GPA</h2>
-                {sem_stats.to_html(index=False)}
+            <div class="info">
+                <p><strong>Name:</strong> {user['Name']}</p>
+                <p><strong>College:</strong> {user['College']}</p>
+                <p><strong>Department:</strong> {user['Department']}</p>
+                <p><strong>Mobile:</strong> {user['Mobile']}</p>
+                <p><strong>Email:</strong> {user['Email']}</p>
+                <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
             </div>
         """
 
-        for sem in sorted(df['Semester'].unique()):
-            html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
-            sem_data = df[df['Semester'] == sem][["Credit", "Score", "Weighted"]]
-            html += sem_data.to_html(index=False)
-            html += "</div>"
+        for sem in sorted(df["Semester"].unique()):
+            sem_df = df[df["Semester"] == sem]
+            gpa = sem_stats[sem_stats["Semester"] == sem]["GPA"].values[0]
+            html += f"""
+            <div class='page'>
+                <h2>Semester {sem} Report</h2>
+                <p><strong>Semester GPA:</strong> {gpa:.2f}</p>
+                <table>
+                    <tr>
+                        <th>Course</th>
+                        <th>Credit</th>
+                        <th>Score</th>
+                        <th>Weighted</th>
+                    </tr>
+            """
+            for _, row in sem_df.iterrows():
+                html += f"""
+                    <tr>
+                        <td>{int(row['Course'])}</td>
+                        <td>{row['Credit']}</td>
+                        <td>{row['Score']}</td>
+                        <td>{row['Weighted']}</td>
+                    </tr>
+                """
+            html += "</table></div>"
 
         html += """
-        <script>
-            function printPage() {
-                var w = window.open('', '_blank');
-                w.document.write(document.documentElement.innerHTML);
-                w.document.close();
-                w.print();
-            }
-        </script>
-        <button onclick="printPage()">Print Report</button>
-        </body></html>
+            <div class="btn-container">
+                <button onclick="window.print()">Print Report</button>
+            </div>
+        </body>
+        </html>
         """
 
-        st.components.v1.html(html, height=800, scrolling=True)
+        st.components.v1.html(html, height=1000, scrolling=True)
