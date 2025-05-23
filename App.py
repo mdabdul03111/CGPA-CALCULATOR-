@@ -1,16 +1,15 @@
 import streamlit as st
 import pandas as pd
 
-# App title
+# Streamlit config
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 
-# Step 1: User Details Page
+# Step 1: User Info
 if not st.session_state.user_submitted:
     st.title("Welcome to CGPA Calculator")
-
     st.markdown("### Please fill in your details:")
 
     name = st.text_input("Name")
@@ -37,9 +36,8 @@ if st.session_state.user_submitted:
     st.title("CGPA Calculator")
 
     user = st.session_state.user_data
-    st.info(f"CGPA result will be shown for:\n\n**{user['Name']}**\n{user['College']} – {user['Department']}\nMobile: {user['Mobile']}\nEmail: {user['Email']}")
+    st.info(f"Calculating CGPA for:\n\n**{user['Name']}**\n{user['College']} – {user['Department']}\nMobile: {user['Mobile']}\nEmail: {user['Email']}")
 
-    # Get number of semesters
     total_semesters = st.number_input("Number of Semesters", min_value=1, step=1, value=2)
 
     records = []
@@ -91,18 +89,49 @@ if st.session_state.user_submitted:
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        result_df = df.copy()
-        result_df["User"] = user["Name"]
-        result_df["College"] = user["College"]
-        result_df["Department"] = user["Department"]
-        result_df["Mobile"] = user["Mobile"]
-        result_df["Email"] = user["Email"]
-        result_df["Overall CGPA"] = overall_cgpa
+        # HTML for print view
+        html = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial; margin: 40px; }}
+                h1 {{ text-align: center; }}
+                .page {{ page-break-after: always; }}
+                table, th, td {{ border: 1px solid black; border-collapse: collapse; padding: 8px; }}
+                th {{ background-color: #f2f2f2; }}
+            </style>
+        </head>
+        <body>
+            <h1>CGPA Report</h1>
+            <p><strong>Name:</strong> {user['Name']}<br>
+               <strong>College:</strong> {user['College']}<br>
+               <strong>Department:</strong> {user['Department']}<br>
+               <strong>Mobile:</strong> {user['Mobile']}<br>
+               <strong>Email:</strong> {user['Email']}<br>
+               <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+            <div class="page">
+                <h2>Semester-wise GPA</h2>
+                {sem_stats.to_html(index=False)}
+            </div>
+        """
 
-        csv = result_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "Download Result as CSV",
-            data=csv,
-            file_name="cgpa_results.csv",
-            mime="text/csv"
-        )
+        for sem in sorted(df['Semester'].unique()):
+            html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
+            sem_data = df[df['Semester'] == sem][["Credit", "Score", "Weighted"]]
+            html += sem_data.to_html(index=False)
+            html += "</div>"
+
+        html += """
+        <script>
+            function printPage() {
+                var w = window.open('', '_blank');
+                w.document.write(document.documentElement.innerHTML);
+                w.document.close();
+                w.print();
+            }
+        </script>
+        <button onclick="printPage()">Print Report</button>
+        </body></html>
+        """
+
+        st.components.v1.html(html, height=800, scrolling=True)
