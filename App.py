@@ -1,19 +1,18 @@
 import streamlit as st
 import pandas as pd
+import streamlit.components.v1 as components
 
-st.title("CGPA Calculator")
+st.set_page_config(page_title="CGPA Calculator", layout="centered")
+st.title("CGPA Calculator by Semester")
 
 st.markdown(
-    "Enter the number of semesters, then for each semester, specify the number of courses "
-    "and input credit hours (0–4) and score (5–10)."
+    "Enter the number of semesters. For each semester, select credits (0–4) and scores (5–10)."
 )
 
 # Input number of semesters
-total_semesters = st.number_input(
-    "Number of semesters", min_value=1, step=1, value=2
-)
+total_semesters = st.number_input("Number of semesters", min_value=1, step=1, value=2)
 
-# Collect course records
+# Collect data
 records = []
 for sem in range(1, total_semesters + 1):
     with st.expander(f"Semester {sem}"):
@@ -40,17 +39,16 @@ for sem in range(1, total_semesters + 1):
                 )
             records.append({"Semester": sem, "Credit": credit, "Score": score})
 
-# Calculate CGPA on button click
+# Generate result and printable view
 if st.button("Calculate CGPA"):
     df = pd.DataFrame(records)
     df["Weighted"] = df["Credit"] * df["Score"]
-
-    # Overall CGPA
     total_credits = df["Credit"].sum()
     total_weighted = df["Weighted"].sum()
     overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
 
-    # Semester-wise GPA
+    st.success(f"Overall CGPA: {overall_cgpa:.2f}")
+    
     sem_stats = (
         df.groupby("Semester")
         .agg(Credits=("Credit", "sum"), WeightedScore=("Weighted", "sum"))
@@ -58,24 +56,72 @@ if st.button("Calculate CGPA"):
     )
     sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
-    # Display results
-    st.subheader("Overall Results")
-    st.write(f"**Total Credits:** {total_credits}")
-    st.write(f"**Overall CGPA:** {overall_cgpa:.2f}")
+    # HTML Report for Print/PDF
+    html = """
+    <html>
+    <head>
+    <style>
+        @media print {
+            .pagebreak { page-break-before: always; }
+        }
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+        .sheet {
+            border: 2px solid black;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: center;
+        }
+        button {
+            margin-top: 20px;
+        }
+    </style>
+    </head>
+    <body>
+    """
+    for sem in range(1, total_semesters + 1):
+        sem_df = df[df["Semester"] == sem]
+        html += f"""
+        <div class="sheet">
+            <h1>Score Sheet - Semester {sem}</h1>
+            <table>
+                <tr><th>Course</th><th>Credit</th><th>Score</th><th>Weighted</th></tr>
+        """
+        for i, row in sem_df.iterrows():
+            html += f"<tr><td>{i+1}</td><td>{row['Credit']}</td><td>{row['Score']}</td><td>{row['Weighted']}</td></tr>"
+        gpa = sem_stats[sem_stats["Semester"] == sem]["GPA"].values[0]
+        html += f"""
+            </table>
+            <p><strong>Semester GPA:</strong> {gpa:.2f}</p>
+        </div>
+        <div class="pagebreak"></div>
+        """
 
-    st.subheader("Semester-wise GPA")
-    st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
+    html += f"""
+    <div class="sheet">
+        <h1>Overall Summary</h1>
+        <p><strong>Total Credits:</strong> {total_credits}</p>
+        <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+    </div>
+    <br>
+    <button onclick="window.print()">Print or Save as PDF</button>
+    </body>
+    </html>
+    """
 
-    st.subheader("Detailed Breakdown")
-    st.dataframe(df)
-
-    # Download results
-    result_df = df.copy()
-    result_df["Overall CGPA"] = overall_cgpa
-    csv = result_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Download Detailed Results as CSV",
-        data=csv,
-        file_name="cgpa_by_semester.csv",
-        mime="text/csv"
-    )
+    components.html(html, height=1000, scrolling=True)
