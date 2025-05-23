@@ -27,12 +27,9 @@ for sem in range(1, total_semesters + 1):
         for course in range(1, num_courses + 1):
             col1, col2 = st.columns(2)
             with col1:
-                credit = st.number_input(
+                credit = st.selectbox(
                     f"Sem {sem} - Course {course} Credit Hours",
-                    min_value=0.0,
-                    max_value=4.0,
-                    step=0.5,
-                    format="%.2f",
+                    options=[0, 1, 2, 3, 4],
                     key=f"credit_{sem}_{course}"
                 )
             with col2:
@@ -40,8 +37,8 @@ for sem in range(1, total_semesters + 1):
                     f"Sem {sem} - Course {course} Score",
                     min_value=5.0,
                     max_value=10.0,
-                    step=0.1,
-                    format="%.2f",
+                    step=1.0,
+                    format="%.0f",
                     key=f"score_{sem}_{course}"
                 )
             records.append({"Semester": sem, "Credit": credit, "Score": score})
@@ -84,4 +81,4 @@ if st.button("Calculate CGPA"):
         data=csv,
         file_name="cgpa_by_semester.csv",
         mime="text/csv"
-  )
+    )
