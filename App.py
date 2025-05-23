@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.title("CGPA Calculator by Semester")
+st.title("CGPA Calculator")
 
 st.markdown(
     "Enter the number of semesters, then for each semester, specify the number of courses "
@@ -33,12 +33,9 @@ for sem in range(1, total_semesters + 1):
                     key=f"credit_{sem}_{course}"
                 )
             with col2:
-                score = st.number_input(
+                score = st.selectbox(
                     f"Sem {sem} - Course {course} Score",
-                    min_value=5.0,
-                    max_value=10.0,
-                    step=1.0,
-                    format="%.0f",
+                    options=list(range(5, 11)),
                     key=f"score_{sem}_{course}"
                 )
             records.append({"Semester": sem, "Credit": credit, "Score": score})
