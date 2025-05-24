@@ -7,7 +7,6 @@ st.set_page_config(page_title="CGPA Calculator", layout="centered")
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 
-# Grade calculator
 def get_grade(score):
     if score == 10:
         return "O"
@@ -22,7 +21,6 @@ def get_grade(score):
     else:
         return "RA"
 
-# Email and mobile validators
 def is_valid_email(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
@@ -59,10 +57,10 @@ if not st.session_state.user_submitted:
 
 # Step 2: CGPA Calculator
 if st.session_state.user_submitted:
-    st.title("CGPA Calculator")
-
     user = st.session_state.user_data
-    st.info(f"**{user['Name']}**\n{user['College']} – {user['Department']}\nMobile: {user['Mobile']} | Email: {user['Email']}")
+    st.markdown(f"<h1 style='text-align: center; color: green;'>Welcome, {user['Name']}!</h1>", unsafe_allow_html=True)
+
+    st.subheader("Enter your academic information below:")
 
     total_semesters = st.number_input("Number of Semesters", min_value=1, step=1, value=2)
 
@@ -91,11 +89,7 @@ if st.session_state.user_submitted:
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
         st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
-        st.subheader("Semester-wise GPA")
         st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
-
-        st.subheader("Detailed Course Breakdown")
-        st.dataframe(df)
 
         html = f"""
         <html>
@@ -103,9 +97,17 @@ if st.session_state.user_submitted:
             <style>
                 body {{
                     font-family: Arial;
-                    border: 4px solid #000;
+                    margin: 0;
+                    padding: 0;
+                }}
+                .page {{
+                    width: 100%;
+                    height: 100%;
+                    page-break-after: always;
                     padding: 20px;
-                    margin: 20px;
+                    box-sizing: border-box;
+                    border: 5px solid black;
+                    position: relative;
                 }}
                 h1, h2 {{
                     text-align: center;
@@ -129,22 +131,21 @@ if st.session_state.user_submitted:
                     background-color: #f2f2f2;
                 }}
                 .watermark {{
-                    position: fixed;
-                    bottom: 100px;
-                    width: 100%;
-                    text-align: center;
-                    opacity: 0.1;
+                    position: absolute;
+                    bottom: 40%;
+                    left: 50%;
+                    transform: translate(-50%, 50%) rotate(-30deg);
                     font-size: 28px;
-                    transform: rotate(-30deg);
+                    color: #000;
+                    opacity: 0.05;
+                    white-space: nowrap;
+                    z-index: 0;
                 }}
                 .disclaimer {{
                     text-align: center;
                     font-size: 12px;
                     color: gray;
-                    margin-top: 20px;
-                }}
-                .page {{
-                    page-break-after: always;
+                    margin-top: 30px;
                 }}
                 .print-btn {{
                     text-align: center;
@@ -153,15 +154,17 @@ if st.session_state.user_submitted:
             </style>
         </head>
         <body>
-            <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
-            <h1>CGPA Report</h1>
-            <div class="info">
-                <p><strong>Name:</strong> {user['Name']}</p>
-                <p><strong>College:</strong> {user['College']}</p>
-                <p><strong>Department:</strong> {user['Department']}</p>
-                <p><strong>Mobile:</strong> {user['Mobile']}</p>
-                <p><strong>Email:</strong> {user['Email']}</p>
-                <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+            <div class="page">
+                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
+                <h1>CGPA Report</h1>
+                <div class="info">
+                    <p><strong>Name:</strong> {user['Name']}</p>
+                    <p><strong>College:</strong> {user['College']}</p>
+                    <p><strong>Department:</strong> {user['Department']}</p>
+                    <p><strong>Mobile:</strong> {user['Mobile']}</p>
+                    <p><strong>Email:</strong> {user['Email']}</p>
+                    <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+                </div>
             </div>
         """
 
@@ -169,7 +172,8 @@ if st.session_state.user_submitted:
             sem_df = df[df["Semester"] == sem]
             gpa = sem_stats[sem_stats["Semester"] == sem]["GPA"].values[0]
             html += f"""
-            <div class='page'>
+            <div class="page">
+                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
                 <h2>Semester {sem}</h2>
                 <p><strong>GPA:</strong> {gpa:.2f}</p>
                 <table>
@@ -194,10 +198,13 @@ if st.session_state.user_submitted:
             html += "</table></div>"
 
         html += """
-            <div class="disclaimer">Disclaimer: CGPA was calculated based on the data feed by student</div>
-            <div class="print-btn"><button onclick="window.print()">Print Report</button></div>
+            <div class="page">
+                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
+                <div class="disclaimer">Disclaimer: CGPA was calculated based on the data feed by student</div>
+                <div class="print-btn"><button onclick="window.print()">Print Report</button></div>
+            </div>
         </body>
         </html>
         """
 
-        st.components.v1.html(html, height=1300, scrolling=True)
+        st.components.v1.html(html, height=1600, scrolling=True)
