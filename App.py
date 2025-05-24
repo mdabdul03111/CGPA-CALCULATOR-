@@ -40,7 +40,6 @@ if st.session_state.user_submitted:
 
     st.info(f"Calculating CGPA for:\n\n**{user['Name']}**\n{user['College']} – {user['Department']}\nEntry Type: {user['EntryType']}")
 
-    # Set semester range based on entry type
     if user["EntryType"] == "Regular":
         min_sem, max_sem = 1, 8
     elif user["EntryType"] == "Lateral":
@@ -107,25 +106,49 @@ if st.session_state.user_submitted:
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        # HTML for print view
+        # HTML Report with page border and full-width tables
         html = f"""
         <html>
         <head>
             <style>
-                body {{ font-family: Arial; margin: 40px; }}
-                h1 {{ text-align: center; }}
-                .page {{ page-break-after: always; }}
-                table, th, td {{ border: 1px solid black; border-collapse: collapse; padding: 8px; }}
-                th {{ background-color: #f2f2f2; }}
+                body {{ font-family: Arial; margin: 20px; }}
+                h1, h2 {{ text-align: center; }}
+                .page {{
+                    border: 3px solid black;
+                    padding: 30px;
+                    margin-bottom: 40px;
+                    page-break-after: always;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }}
+                th, td {{
+                    border: 1px solid #000;
+                    padding: 8px;
+                    text-align: center;
+                }}
+                th {{
+                    background-color: #f2f2f2;
+                }}
             </style>
         </head>
         <body>
-            <h1>CGPA Report</h1>
-            <p><strong>Name:</strong> {user['Name']}<br>
-               <strong>College:</strong> {user['College']}<br>
-               <strong>Department:</strong> {user['Department']}<br>
-               <strong>Entry Type:</strong> {user['EntryType']}<br>
-               <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+            <div class="page">
+                <h1>Welcome to the CGPA Calculator</h1>
+                <p><strong>This report presents the academic performance of the student based on semester-wise data provided.</strong></p>
+            </div>
+
+            <div class="page">
+                <h2>Student Details</h2>
+                <p><strong>Name:</strong> {user['Name']}<br>
+                   <strong>College:</strong> {user['College']}<br>
+                   <strong>Department:</strong> {user['Department']}<br>
+                   <strong>Entry Type:</strong> {user['EntryType']}<br>
+                   <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+            </div>
+
             <div class="page">
                 <h2>Semester-wise GPA</h2>
                 {sem_stats.to_html(index=False)}
@@ -133,10 +156,13 @@ if st.session_state.user_submitted:
         """
 
         for sem in sorted(df['Semester'].unique()):
-            html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
             sem_data = df[df['Semester'] == sem][["Credit", "Score", "Weighted"]]
-            html += sem_data.to_html(index=False)
-            html += "</div>"
+            html += f"""
+            <div class="page">
+                <h2>Semester {sem} Breakdown</h2>
+                {sem_data.to_html(index=False)}
+            </div>
+            """
 
         html += """
         <script>
@@ -147,7 +173,7 @@ if st.session_state.user_submitted:
                 w.print();
             }
         </script>
-        <button onclick="printPage()">Print Report</button>
+        <center><button onclick="printPage()">Print Report</button></center>
         </body></html>
         """
 
