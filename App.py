@@ -4,10 +4,14 @@ import pandas as pd
 # Streamlit config
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
+# Grade mapping
+def map_grade(score):
+    return {10: "O", 9: "A+", 8: "A", 7: "B+", 6: "B", 5: "C"}.get(score, "NA")
+
+# Welcome / user info page
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 
-# Step 1: User Info
 if not st.session_state.user_submitted:
     st.title("Welcome to CGPA Calculator")
     st.markdown("### Please fill in your details:")
@@ -15,10 +19,9 @@ if not st.session_state.user_submitted:
     name = st.text_input("Name")
     college = st.text_input("College")
     department = st.text_input("Department")
-
     entry_type = st.selectbox(
-        "Entry Type",
-        ["Regular", "Lateral", "Sandwich - Regular", "Sandwich - Lateral"]
+        "Select Entry Type",
+        ["Regular", "Lateral", "Sandwich – Regular", "Sandwich – Lateral"]
     )
 
     if st.button("Submit"):
@@ -33,31 +36,30 @@ if not st.session_state.user_submitted:
         else:
             st.warning("Please fill all fields before proceeding.")
 
-# Step 2: CGPA Calculator
+# CGPA calculator logic
 if st.session_state.user_submitted:
-    user = st.session_state.user_data
     st.title("CGPA Calculator")
-    st.markdown("Welcome! Please enter your semester-wise course details below:")
+    st.markdown("#### Welcome to the CGPA calculator page. Fill in your semester details below.")
 
-    if user["EntryType"] == "Regular":
-        min_sem, max_sem = 1, 8
-    elif user["EntryType"] == "Lateral":
-        min_sem, max_sem = 3, 8
-    elif user["EntryType"] == "Sandwich - Regular":
-        min_sem, max_sem = 1, 10
-    elif user["EntryType"] == "Sandwich - Lateral":
-        min_sem, max_sem = 3, 10
-
-    selected_max_sem = st.slider(
-        "Select number of semesters you want to enter:",
-        min_value=min_sem,
-        max_value=max_sem,
-        value=min_sem,
-        step=1
+    user = st.session_state.user_data
+    st.info(
+        f"Calculating CGPA for:\n\n"
+        f"**{user['Name']}**\n{user['College']} – {user['Department']}\n"
+        f"Entry Type: {user['EntryType']}"
     )
 
+    # Set semester range
+    entry_type = user["EntryType"]
+    if "Lateral" in entry_type:
+        min_sem = 3
+    else:
+        min_sem = 1
+
+    max_sem = 8 if "Regular" in entry_type and "Sandwich" not in entry_type else 10
+    total_semesters = st.slider("Select number of semesters", min_sem, max_sem, max_sem)
+
     records = []
-    for sem in range(min_sem, selected_max_sem + 1):
+    for sem in range(min_sem, total_semesters + 1):
         with st.expander(f"Semester {sem}"):
             num_courses = st.number_input(
                 f"Number of Courses in Semester {sem}",
@@ -80,7 +82,13 @@ if st.session_state.user_submitted:
                         options=list(range(5, 11)),
                         key=f"score_{sem}_{course}"
                     )
-                records.append({"Semester": sem, "Credit": credit, "Score": score})
+                grade = map_grade(score)
+                records.append({
+                    "Semester": sem,
+                    "Credit": credit,
+                    "Score": score,
+                    "Grade": grade
+                })
 
     if st.button("Calculate CGPA"):
         df = pd.DataFrame(records)
@@ -105,32 +113,31 @@ if st.session_state.user_submitted:
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        # Printable HTML with watermark and improved design
+        # Generate printable HTML
         html = f"""
         <html>
         <head>
             <style>
-                body {{
-                    font-family: 'Segoe UI', sans-serif;
-                    margin: 40px;
-                    color: #222;
+                @media print {{
+                    .page {{ page-break-after: always; }}
                 }}
-                .page {{
-                    border: 3px solid #000;
-                    padding: 30px;
-                    margin-bottom: 50px;
-                    page-break-after: always;
-                    position: relative;
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 40px;
                 }}
                 h1, h2 {{
                     text-align: center;
-                    margin-bottom: 20px;
+                }}
+                .page {{
+                    border: 2px solid #000;
+                    padding: 30px;
+                    margin-bottom: 50px;
+                    position: relative;
                 }}
                 table {{
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
-                    font-size: 14px;
                 }}
                 th, td {{
                     border: 1px solid #000;
@@ -144,38 +151,30 @@ if st.session_state.user_submitted:
                     position: absolute;
                     bottom: 10px;
                     left: 10px;
-                    font-size: 12px;
+                    font-size: 10px;
                     color: #888;
                 }}
             </style>
         </head>
         <body>
             <div class="page">
-                <h1>Student Details</h1>
+                <h1>CGPA Report</h1>
                 <p><strong>Name:</strong> {user['Name']}<br>
                    <strong>College:</strong> {user['College']}<br>
                    <strong>Department:</strong> {user['Department']}<br>
                    <strong>Entry Type:</strong> {user['EntryType']}<br>
                    <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
-                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
-            </div>
-
-            <div class="page">
                 <h2>Semester-wise GPA</h2>
                 {sem_stats.to_html(index=False)}
-                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
+                <div class="watermark">Disclaimer: This CGPA was calculated based on data fed by student</div>
             </div>
         """
 
         for sem in sorted(df['Semester'].unique()):
-            sem_data = df[df['Semester'] == sem][["Credit", "Score", "Weighted"]]
-            html += f"""
-            <div class="page">
-                <h2>Semester {sem} Breakdown</h2>
-                {sem_data.to_html(index=False)}
-                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
-            </div>
-            """
+            html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
+            sem_data = df[df['Semester'] == sem][["Credit", "Score", "Grade", "Weighted"]]
+            html += sem_data.to_html(index=False)
+            html += "<div class='watermark'>Disclaimer: This CGPA was calculated based on data fed by student</div></div>"
 
         html += """
         <script>
@@ -186,8 +185,10 @@ if st.session_state.user_submitted:
                 w.print();
             }
         </script>
-        <center><button onclick="printPage()">Print Report</button></center>
+        <div style='text-align:center; margin-top:20px;'>
+            <button onclick="printPage()">Print Report</button>
+        </div>
         </body></html>
         """
 
-        st.components.v1.html(html, height=800, scrolling=True)
+        st.components.v1.html(html, height=900, scrolling=True)
