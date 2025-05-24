@@ -1,6 +1,4 @@
-import streamlit as st 
-import pandas as pd 
-import io
+import streamlit as st import pandas as pd import io
 
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
