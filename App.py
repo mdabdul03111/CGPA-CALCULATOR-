@@ -1,168 +1,118 @@
-import streamlit as st
-import pandas as pd
+import streamlit as st import pandas as pd import io
 
-st.set_page_config(page_title="CGPA Calculator", layout="wide")
+st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
-# Grade mapping
-grade_map = {
-    10: "O",
-    9: "A+",
-    8: "A",
-    7: "B+",
-    6: "B",
-    5: "C",
-}
+if "user_submitted" not in st.session_state: st.session_state.user_submitted = False
 
-# Entry types and corresponding semester settings
-entry_config = {
-    "Regular": (1, 8),
-    "Lateral": (3, 8),
-    "Sandwich - Regular": (1, 10),
-    "Sandwich - Lateral": (3, 10),
-}
+Grade calculation function
 
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
+def get_grade(score): return { 10: "O", 9: "A+", 8: "A", 7: "B+", 6: "B", 5: "C" }.get(score, "RA")
 
-if not st.session_state.submitted:
-    st.title("Welcome to CGPA Calculator")
+Entry options and semester rules
 
-    name = st.text_input("Name")
-    college = st.text_input("College")
-    department = st.text_input("Department")
-    entry_type = st.selectbox("Entry Type", list(entry_config.keys()))
+def get_semester_range(entry_type): if entry_type == "Regular": return 1, 8 elif entry_type == "Lateral": return 3, 8 elif entry_type == "Sandwich - Regular": return 1, 10 elif entry_type == "Sandwich - Lateral": return 3, 10 else: return 1, 8
 
-    if st.button("Start"):
-        if all([name, college, department, entry_type]):
-            st.session_state.name = name
-            st.session_state.college = college
-            st.session_state.department = department
-            st.session_state.entry_type = entry_type
-            st.session_state.start_sem, st.session_state.max_sem = entry_config[entry_type]
-            st.session_state.submitted = True
-        else:
-            st.warning("Please fill all fields before proceeding.")
+Step 1: User Details Page
 
-if st.session_state.submitted:
-    st.title("CGPA Calculator")
+if not st.session_state.user_submitted: st.title("Welcome to CGPA Calculator")
 
-    name = st.session_state.name
-    college = st.session_state.college
-    dept = st.session_state.department
-    entry = st.session_state.entry_type
-    start_sem, max_sem = st.session_state.start_sem, st.session_state.max_sem
+st.markdown("### Please fill in your details:")
 
-    st.markdown(f"#### Welcome, **{name}**")
-    st.info(f"Calculating CGPA for: **{name}**, {college}, {dept} ({entry})")
+name = st.text_input("Name")
+college = st.text_input("College")
+department = st.text_input("Department")
+entry_type = st.selectbox("Entry Type", ["Regular", "Lateral", "Sandwich - Regular", "Sandwich - Lateral"])
 
-    total_sem = st.number_input("Number of Semesters", min_value=start_sem, max_value=max_sem, step=1, value=start_sem)
+if st.button("Submit"):
+    if all([name, college, department, entry_type]):
+        start_sem, max_sem = get_semester_range(entry_type)
+        st.session_state.user_data = {
+            "Name": name,
+            "College": college,
+            "Department": department,
+            "EntryType": entry_type,
+            "StartSem": start_sem,
+            "MaxSem": max_sem
+        }
+        st.session_state.user_submitted = True
+    else:
+        st.warning("Please fill all fields before proceeding.")
 
-    data = []
-    for sem in range(start_sem, total_sem + 1):
-        with st.expander(f"Semester {sem}"):
-            courses = st.number_input(f"Number of courses in Semester {sem}", min_value=1, step=1, value=5, key=f"c_{sem}")
-            for i in range(1, courses + 1):
-                col1, col2 = st.columns(2)
-                with col1:
-                    credit = st.selectbox(f"Course {i} Credit", [1, 2, 3, 4], key=f"credit_{sem}_{i}")
-                with col2:
-                    score = st.selectbox(f"Course {i} Score", list(range(5, 11)), key=f"score_{sem}_{i}")
-                grade = grade_map.get(score, "F")
-                data.append({"Semester": sem, "Course": i, "Credit": credit, "Score": score, "Grade": grade})
+Step 2: CGPA Calculator
 
-    if st.button("Calculate CGPA and Generate Report"):
-        df = pd.DataFrame(data)
-        df["Weighted"] = df["Credit"] * df["Score"]
+if st.session_state.user_submitted: user = st.session_state.user_data st.title(f"Welcome, {user['Name']}!") st.subheader("Enter your semester-wise course data")
 
-        sem_stats = df.groupby("Semester").agg(
-            Total_Credits=("Credit", "sum"),
-            Weighted_Score=("Weighted", "sum")
-        ).reset_index()
-        sem_stats["GPA"] = sem_stats["Weighted_Score"] / sem_stats["Total_Credits"]
+records = []
+for sem in range(user['StartSem'], user['MaxSem'] + 1):
+    with st.expander(f"Semester {sem}"):
+        num_courses = st.number_input(
+            f"Number of Courses in Semester {sem}",
+            min_value=1,
+            step=1,
+            value=5,
+            key=f"courses_{sem}"
+        )
+        for course in range(1, num_courses + 1):
+            col1, col2 = st.columns(2)
+            with col1:
+                credit = st.selectbox(
+                    f"Course {course} Credit (0–4)",
+                    options=[0, 1, 2, 3, 4],
+                    key=f"credit_{sem}_{course}"
+                )
+            with col2:
+                score = st.selectbox(
+                    f"Course {course} Score (5–10)",
+                    options=list(range(5, 11)),
+                    key=f"score_{sem}_{course}"
+                )
+            grade = get_grade(score)
+            records.append({"Semester": sem, "Credit": credit, "Score": score, "Grade": grade})
 
-        overall_cgpa = df["Weighted"].sum() / df["Credit"].sum()
+if st.button("Calculate CGPA and Print"):
+    df = pd.DataFrame(records)
+    df["Weighted"] = df["Credit"] * df["Score"]
 
-        # Show result
-        st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
-        st.subheader("Semester-wise GPA")
-        st.dataframe(sem_stats)
+    total_credits = df["Credit"].sum()
+    total_weighted = df["Weighted"].sum()
+    overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
 
-        st.subheader("Course Breakdown")
-        st.dataframe(df)
+    sem_stats = (
+        df.groupby("Semester")
+        .agg(Credits=("Credit", "sum"), WeightedScore=("Weighted", "sum"))
+        .reset_index()
+    )
+    sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
-        # Generate printable HTML report
-        html = f"""
-        <style>
-            .page {{
-                page-break-after: always;
-                border: 2px solid black;
-                padding: 20px;
-                margin: 20px auto;
-                max-width: 800px;
-            }}
-            .watermark {{
-                color: #aaa;
-                font-size: 10px;
-                text-align: center;
-                margin-top: 30px;
-            }}
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 10px;
-            }}
-            th, td {{
-                border: 1px solid #333;
-                padding: 8px;
-                text-align: center;
-            }}
-        </style>
-        """
+    st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
 
-        first_page = df[df["Semester"] == start_sem]
-        html += f"""
-        <div class="page">
-            <h2>CGPA Report</h2>
-            <p><strong>Name:</strong> {name}<br>
-               <strong>College:</strong> {college}<br>
-               <strong>Department:</strong> {dept}<br>
-               <strong>Entry Type:</strong> {entry}</p>
-            <h4>Semester {start_sem}</h4>
-            <table>
-                <tr><th>Course</th><th>Credit</th><th>Score</th><th>Grade</th></tr>
-        """
-        for _, row in first_page.iterrows():
-            html += f"<tr><td>{row['Course']}</td><td>{row['Credit']}</td><td>{row['Score']}</td><td>{row['Grade']}</td></tr>"
-        html += f"""
-            </table>
-            <p><strong>GPA:</strong> {sem_stats.loc[sem_stats['Semester'] == start_sem, 'GPA'].values[0]:.2f}</p>
-            <div class="watermark">Disclaimer: CGPA was calculated based on the data fed by student</div>
-        </div>
-        """
+    st.subheader("Semester-wise GPA")
+    st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
 
-        for sem in range(start_sem + 1, total_sem + 1):
-            sem_data = df[df["Semester"] == sem]
-            html += f"""
-            <div class="page">
-                <h4>Semester {sem}</h4>
-                <table>
-                    <tr><th>Course</th><th>Credit</th><th>Score</th><th>Grade</th></tr>
-            """
-            for _, row in sem_data.iterrows():
-                html += f"<tr><td>{row['Course']}</td><td>{row['Credit']}</td><td>{row['Score']}</td><td>{row['Grade']}</td></tr>"
-            html += f"""
-                </table>
-                <p><strong>GPA:</strong> {sem_stats.loc[sem_stats['Semester'] == sem, 'GPA'].values[0]:.2f}</p>
-                <div class="watermark">Disclaimer: CGPA was calculated based on the data fed by student</div>
-            </div>
-            """
+    st.subheader("Detailed Course Breakdown")
+    st.dataframe(df)
 
-        html += f"""
-        <div class="page">
-            <h3>Overall CGPA: {overall_cgpa:.2f}</h3>
-            <div class="watermark">Disclaimer: CGPA was calculated based on the data fed by student</div>
-        </div>
-        """
+    # Simulated Print - Plain Text Export (no external module)
+    output = io.StringIO()
+    output.write("CGPA Report\n")
+    output.write("="*50 + "\n")
+    output.write(f"Name: {user['Name']}\nCollege: {user['College']}\nDepartment: {user['Department']}\nEntry Type: {user['EntryType']}\n")
+    output.write("\n")
+    output.write(f"Overall CGPA: {overall_cgpa:.2f}\n\n")
 
-        st.markdown(html, unsafe_allow_html=True)
-        st.markdown("**Use Ctrl+P or Command+P to print or save as PDF.**")
+    for sem in range(user['StartSem'], user['MaxSem'] + 1):
+        output.write(f"Semester {sem} Results\n")
+        output.write("-"*40 + "\n")
+        sem_df = df[df["Semester"] == sem]
+        output.write(sem_df.to_string(index=False))
+        output.write("\n\n")
+
+    output.write("Disclaimer: CGPA was calculated based on the data fed by student.\n")
+
+    st.download_button(
+        label="Download Text Report",
+        data=output.getvalue(),
+        file_name="cgpa_report.txt",
+        mime="text/plain"
+    )
+
