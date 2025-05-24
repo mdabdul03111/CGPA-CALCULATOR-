@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
-import re
 
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 
+# Grade mapping function
 def get_grade(score):
     if score == 10:
         return "O"
@@ -21,13 +21,7 @@ def get_grade(score):
     else:
         return "RA"
 
-def is_valid_email(email):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", email)
-
-def is_valid_mobile(mobile):
-    return re.match(r"^[6-9]\d{9}$", mobile)
-
-# Step 1: User Details
+# Step 1: Collect user details
 if not st.session_state.user_submitted:
     st.title("Welcome to CGPA Calculator")
     st.markdown("### Please fill in your details:")
@@ -35,92 +29,126 @@ if not st.session_state.user_submitted:
     name = st.text_input("Name")
     college = st.text_input("College")
     department = st.text_input("Department")
-    mobile = st.text_input("Mobile Number")
-    email = st.text_input("Email ID")
+    entry_type = st.radio("Entry Type", [
+        "Regular", "Lateral", 
+        "Sandwich - Regular", "Sandwich - Lateral"
+    ])
 
     if st.button("Submit"):
-        if not all([name, college, department, mobile, email]):
-            st.warning("Please fill all fields before proceeding.")
-        elif not is_valid_mobile(mobile):
-            st.warning("Enter a valid 10-digit Indian mobile number.")
-        elif not is_valid_email(email):
-            st.warning("Enter a valid email address.")
-        else:
+        if all([name, college, department]):
             st.session_state.user_data = {
                 "Name": name,
                 "College": college,
                 "Department": department,
-                "Mobile": mobile,
-                "Email": email
+                "EntryType": entry_type
             }
             st.session_state.user_submitted = True
+        else:
+            st.warning("Please fill all fields before proceeding.")
 
 # Step 2: CGPA Calculator
 if st.session_state.user_submitted:
     user = st.session_state.user_data
-    st.markdown(f"<h1 style='text-align: center; color: green;'>Welcome, {user['Name']}!</h1>", unsafe_allow_html=True)
+    st.title("CGPA Calculator")
+    st.info(f"Calculating CGPA for **{user['Name']}** – {user['College']} ({user['Department']})")
 
-    st.subheader("Enter your academic information below:")
+    entry = user["EntryType"]
+    if entry == "Lateral":
+        start_sem, max_sem = 3, 8
+    elif entry == "Regular":
+        start_sem, max_sem = 1, 8
+    elif entry == "Sandwich - Regular":
+        start_sem, max_sem = 1, 10
+    elif entry == "Sandwich - Lateral":
+        start_sem, max_sem = 3, 10
+    else:
+        start_sem, max_sem = 1, 8
 
-    total_semesters = st.number_input("Number of Semesters", min_value=1, step=1, value=2)
+    total_semesters = st.number_input(
+        "Number of Semesters",
+        min_value=1,
+        max_value=max_sem - start_sem + 1,
+        step=1,
+        value=max_sem - start_sem + 1
+    )
 
     records = []
-    for sem in range(1, total_semesters + 1):
+
+    for sem in range(start_sem, start_sem + total_semesters):
+        if sem > max_sem:
+            break
         with st.expander(f"Semester {sem}"):
-            num_courses = st.number_input(f"Number of Courses in Semester {sem}", min_value=1, step=1, value=5, key=f"courses_{sem}")
+            num_courses = st.number_input(
+                f"Number of Courses in Semester {sem}",
+                min_value=1,
+                step=1,
+                value=5,
+                key=f"courses_{sem}"
+            )
             for course in range(1, num_courses + 1):
                 col1, col2 = st.columns(2)
                 with col1:
-                    credit = st.selectbox(f"Course {course} Credit", [0, 1, 2, 3, 4], key=f"credit_{sem}_{course}")
+                    credit = st.selectbox(
+                        f"Course {course} Credit",
+                        options=[0, 1, 2, 3, 4],
+                        key=f"credit_{sem}_{course}"
+                    )
                 with col2:
-                    score = st.selectbox(f"Course {course} Score", list(range(5, 11)), key=f"score_{sem}_{course}")
-                records.append({"Semester": sem, "Course": course, "Credit": credit, "Score": score})
+                    score = st.selectbox(
+                        f"Course {course} Score",
+                        options=list(range(5, 11)),
+                        key=f"score_{sem}_{course}"
+                    )
+                records.append({
+                    "Semester": sem,
+                    "Course": course,
+                    "Credit": credit,
+                    "Score": score,
+                    "Grade": get_grade(score),
+                    "Weighted": credit * score
+                })
 
     if st.button("Calculate CGPA"):
         df = pd.DataFrame(records)
-        df["Weighted"] = df["Credit"] * df["Score"]
-        df["Grade"] = df["Score"].apply(get_grade)
-
         total_credits = df["Credit"].sum()
         total_weighted = df["Weighted"].sum()
         overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
 
-        sem_stats = df.groupby("Semester").agg(Credits=("Credit", "sum"), WeightedScore=("Weighted", "sum")).reset_index()
+        sem_stats = df.groupby("Semester").agg(
+            Credits=("Credit", "sum"),
+            WeightedScore=("Weighted", "sum")
+        ).reset_index()
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
         st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
+        st.subheader("Semester-wise GPA")
         st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
 
+        st.subheader("Detailed Course Breakdown")
+        st.dataframe(df)
+
+        # Printable HTML with border and watermark
         html = f"""
         <html>
         <head>
             <style>
                 body {{
                     font-family: Arial;
-                    margin: 0;
-                    padding: 0;
-                }}
-                .page {{
-                    width: 100%;
-                    height: 100%;
-                    page-break-after: always;
-                    padding: 20px;
-                    box-sizing: border-box;
-                    border: 5px solid black;
-                    position: relative;
+                    border: 3px solid black;
+                    padding: 30px;
                 }}
                 h1, h2 {{
                     text-align: center;
                 }}
                 .info {{
                     font-size: 16px;
-                    margin-bottom: 20px;
+                    margin-bottom: 10px;
                 }}
                 table {{
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 15px;
-                    font-size: 14px;
+                    margin-top: 10px;
+                    margin-bottom: 30px;
                 }}
                 th, td {{
                     border: 1px solid #000;
@@ -131,21 +159,18 @@ if st.session_state.user_submitted:
                     background-color: #f2f2f2;
                 }}
                 .watermark {{
-                    position: absolute;
-                    bottom: 40%;
-                    left: 50%;
-                    transform: translate(-50%, 50%) rotate(-30deg);
-                    font-size: 28px;
-                    color: #000;
-                    opacity: 0.05;
-                    white-space: nowrap;
-                    z-index: 0;
+                    position: fixed;
+                    bottom: 80px;
+                    width: 100%;
+                    text-align: center;
+                    opacity: 0.1;
+                    font-size: 30px;
+                    transform: rotate(-30deg);
                 }}
                 .disclaimer {{
                     text-align: center;
                     font-size: 12px;
-                    color: gray;
-                    margin-top: 30px;
+                    color: #888;
                 }}
                 .print-btn {{
                     text-align: center;
@@ -154,17 +179,14 @@ if st.session_state.user_submitted:
             </style>
         </head>
         <body>
-            <div class="page">
-                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
-                <h1>CGPA Report</h1>
-                <div class="info">
-                    <p><strong>Name:</strong> {user['Name']}</p>
-                    <p><strong>College:</strong> {user['College']}</p>
-                    <p><strong>Department:</strong> {user['Department']}</p>
-                    <p><strong>Mobile:</strong> {user['Mobile']}</p>
-                    <p><strong>Email:</strong> {user['Email']}</p>
-                    <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
-                </div>
+            <div class="watermark">Disclaimer: CGPA was calculated based on the data fed by student</div>
+            <h1>CGPA Report</h1>
+            <div class="info">
+                <p><strong>Name:</strong> {user['Name']}</p>
+                <p><strong>College:</strong> {user['College']}</p>
+                <p><strong>Department:</strong> {user['Department']}</p>
+                <p><strong>Entry Type:</strong> {user['EntryType']}</p>
+                <p><strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
             </div>
         """
 
@@ -172,39 +194,36 @@ if st.session_state.user_submitted:
             sem_df = df[df["Semester"] == sem]
             gpa = sem_stats[sem_stats["Semester"] == sem]["GPA"].values[0]
             html += f"""
-            <div class="page">
-                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
-                <h2>Semester {sem}</h2>
-                <p><strong>GPA:</strong> {gpa:.2f}</p>
-                <table>
-                    <tr>
-                        <th>Course</th>
-                        <th>Credit</th>
-                        <th>Score</th>
-                        <th>Grade</th>
-                        <th>Weighted</th>
-                    </tr>
+            <h2>Semester {sem}</h2>
+            <p><strong>GPA:</strong> {gpa:.2f}</p>
+            <table>
+                <tr>
+                    <th>Course</th>
+                    <th>Credit</th>
+                    <th>Score</th>
+                    <th>Grade</th>
+                    <th>Weighted</th>
+                </tr>
             """
             for _, row in sem_df.iterrows():
                 html += f"""
-                    <tr>
-                        <td>{int(row['Course'])}</td>
-                        <td>{row['Credit']}</td>
-                        <td>{row['Score']}</td>
-                        <td>{row['Grade']}</td>
-                        <td>{row['Weighted']}</td>
-                    </tr>
+                <tr>
+                    <td>{int(row['Course'])}</td>
+                    <td>{row['Credit']}</td>
+                    <td>{row['Score']}</td>
+                    <td>{row['Grade']}</td>
+                    <td>{row['Weighted']}</td>
+                </tr>
                 """
-            html += "</table></div>"
+            html += "</table>"
 
         html += """
-            <div class="page">
-                <div class="watermark">Disclaimer: CGPA was calculated based on the data feed by student</div>
-                <div class="disclaimer">Disclaimer: CGPA was calculated based on the data feed by student</div>
-                <div class="print-btn"><button onclick="window.print()">Print Report</button></div>
+            <div class="disclaimer">Disclaimer: CGPA was calculated based on the data fed by student</div>
+            <div class="print-btn">
+                <button onclick="window.print()">Print Report</button>
             </div>
         </body>
         </html>
         """
 
-        st.components.v1.html(html, height=1600, scrolling=True)
+        st.components.v1.html(html, height=1300, scrolling=True)
