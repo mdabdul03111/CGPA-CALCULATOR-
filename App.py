@@ -37,8 +37,7 @@ if not st.session_state.user_submitted:
 if st.session_state.user_submitted:
     user = st.session_state.user_data
     st.title("CGPA Calculator")
-
-    st.info(f"Calculating CGPA for:\n\n**{user['Name']}**\n{user['College']} – {user['Department']}\nEntry Type: {user['EntryType']}")
+    st.markdown("Welcome! Please enter your semester-wise course details below:")
 
     if user["EntryType"] == "Regular":
         min_sem, max_sem = 1, 8
@@ -106,23 +105,32 @@ if st.session_state.user_submitted:
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        # HTML Report with page border and full-width tables
+        # Printable HTML with watermark and improved design
         html = f"""
         <html>
         <head>
             <style>
-                body {{ font-family: Arial; margin: 20px; }}
-                h1, h2 {{ text-align: center; }}
+                body {{
+                    font-family: 'Segoe UI', sans-serif;
+                    margin: 40px;
+                    color: #222;
+                }}
                 .page {{
-                    border: 3px solid black;
+                    border: 3px solid #000;
                     padding: 30px;
-                    margin-bottom: 40px;
+                    margin-bottom: 50px;
                     page-break-after: always;
+                    position: relative;
+                }}
+                h1, h2 {{
+                    text-align: center;
+                    margin-bottom: 20px;
                 }}
                 table {{
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
+                    font-size: 14px;
                 }}
                 th, td {{
                     border: 1px solid #000;
@@ -130,28 +138,32 @@ if st.session_state.user_submitted:
                     text-align: center;
                 }}
                 th {{
-                    background-color: #f2f2f2;
+                    background-color: #f0f0f0;
+                }}
+                .watermark {{
+                    position: absolute;
+                    bottom: 10px;
+                    left: 10px;
+                    font-size: 12px;
+                    color: #888;
                 }}
             </style>
         </head>
         <body>
             <div class="page">
-                <h1>Welcome to the CGPA Calculator</h1>
-                <p><strong>This report presents the academic performance of the student based on semester-wise data provided.</strong></p>
-            </div>
-
-            <div class="page">
-                <h2>Student Details</h2>
+                <h1>Student Details</h1>
                 <p><strong>Name:</strong> {user['Name']}<br>
                    <strong>College:</strong> {user['College']}<br>
                    <strong>Department:</strong> {user['Department']}<br>
                    <strong>Entry Type:</strong> {user['EntryType']}<br>
                    <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
             </div>
 
             <div class="page">
                 <h2>Semester-wise GPA</h2>
                 {sem_stats.to_html(index=False)}
+                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
             </div>
         """
 
@@ -161,6 +173,7 @@ if st.session_state.user_submitted:
             <div class="page">
                 <h2>Semester {sem} Breakdown</h2>
                 {sem_data.to_html(index=False)}
+                <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
             </div>
             """
 
