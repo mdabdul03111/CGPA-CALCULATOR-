@@ -1,222 +1,169 @@
 import streamlit as st
 import pandas as pd
-import streamlit.components.v1 as components
 
+# Set up Streamlit page
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
 # Initialize session state
-if "step" not in st.session_state:
-    st.session_state.step = 1
+if "user_submitted" not in st.session_state:
+    st.session_state.user_submitted = False
 if "user_data" not in st.session_state:
     st.session_state.user_data = {}
-if "existing_cgpa_path" not in st.session_state:
-    st.session_state.existing_cgpa_path = False
+if "step" not in st.session_state:
+    st.session_state.step = 1
 
-def get_grade(score):
+# Grade Mapping
+def grade(score):
     return {
-        10: "O",
-        9: "A+",
-        8: "A",
-        7: "B+",
-        6: "B",
-        5: "C"
-    }.get(score, "-")
+        10: 'O', 9: 'A+', 8: 'A',
+        7: 'B+', 6: 'B', 5: 'C'
+    }.get(score, '')
 
-def get_semester_limits(entry_type):
-    if entry_type == "Regular":
-        return 1, 8
-    elif entry_type == "Lateral":
-        return 3, 8
-    elif entry_type == "Sandwich - Regular":
-        return 1, 10
-    elif entry_type == "Sandwich - Lateral":
-        return 3, 10
-    else:
-        return 1, 8
+# Welcome message (not printed)
+st.title("CGPA Calculator")
+st.markdown("#### Welcome! This tool helps you calculate your CGPA accurately.")
 
-# Step 1: User Info Page
+# Step 1: User Info
 if st.session_state.step == 1:
-    st.title("Welcome to CGPA Calculator")
-    st.markdown("### Please fill in your details:")
+    st.header("Enter Your Details")
 
     name = st.text_input("Name")
     college = st.text_input("College")
     department = st.text_input("Department")
-    entry_type = st.selectbox("Entry Type", ["Regular", "Lateral", "Sandwich - Regular", "Sandwich - Lateral"])
-    existing_cgpa_option = st.radio("Do you already have a CGPA?", ["No", "Yes"])
 
-    if st.button("Next"):
-        if not (name and college and department):
-            st.warning("Please fill all fields.")
-        else:
+    entry_type = st.selectbox("Entry Type", ["Regular", "Lateral", "Sandwich - Regular", "Sandwich - Lateral"])
+    cgpa_available = st.radio("Do you already have an existing CGPA?", ["No", "Yes"])
+
+    if st.button("Proceed"):
+        if all([name, college, department]):
             st.session_state.user_data = {
                 "Name": name,
                 "College": college,
                 "Department": department,
-                "Entry": entry_type,
-                "ExistingCGPA": existing_cgpa_option == "Yes"
+                "EntryType": entry_type,
+                "CGPAAvailable": cgpa_available
             }
-            st.session_state.existing_cgpa_path = existing_cgpa_option == "Yes"
             st.session_state.step = 2
-            st.experimental_rerun()
-
-# Step 2: Existing CGPA path
-if st.session_state.step == 2 and st.session_state.existing_cgpa_path:
-    user = st.session_state.user_data
-    st.title("Continue CGPA Calculation")
-
-    start_sem, max_sem = get_semester_limits(user["Entry"])
-
-    sem_completed = st.number_input(f"Upto which semester you have CGPA? (between {start_sem} and {max_sem})", 
-                                    min_value=start_sem, max_value=max_sem, step=1)
-    existing_cgpa = st.number_input("Enter your existing CGPA (1.0 to 10.0)", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
-    prev_credits = st.number_input("Total credits earned upto previous semester", min_value=1, step=1)
-
-    if sem_completed and existing_cgpa and prev_credits:
-        remaining_sem_start = sem_completed + 1
-        remaining_sem_max = max_sem
-
-        max_remaining = remaining_sem_max - sem_completed
-        if max_remaining <= 0:
-            st.error("No remaining semesters to enter.")
         else:
-            sem_limit = st.slider("Select number of semesters you want to enter", min_value=1, max_value=max_remaining, value=max_remaining)
+            st.warning("Please complete all fields.")
 
-            records = []
-            for sem in range(remaining_sem_start, remaining_sem_start + sem_limit):
-                with st.expander(f"Semester {sem}"):
-                    num_courses = st.number_input(f"Number of courses in Semester {sem}", min_value=1, step=1, value=5, key=f"courses_{sem}")
-                    for course in range(1, num_courses + 1):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            credit = st.selectbox(f"Course {course} Credit", options=[0,1,2,3,4], key=f"credit_{sem}_{course}")
-                        with col2:
-                            score = st.selectbox(f"Course {course} Score", options=list(range(5,11)), key=f"score_{sem}_{course}")
-                        records.append({"Semester": sem, "Credit": credit, "Score": score})
-
-            if st.button("Calculate CGPA"):
-                df = pd.DataFrame(records)
-                df["Weighted"] = df["Credit"] * df["Score"]
-                df["Grade"] = df["Score"].apply(get_grade)
-
-                total_credits = df["Credit"].sum()
-                total_weighted = df["Weighted"].sum()
-
-                overall_cgpa = (existing_cgpa * prev_credits + total_weighted) / (prev_credits + total_credits)
-
-                sem_stats = df.groupby("Semester").agg(Credits=("Credit", "sum"),
-                                                       WeightedScore=("Weighted", "sum")).reset_index()
-                sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
-
-                st.success(f"**Updated CGPA: {overall_cgpa:.2f}**")
-
-                # Generate printable report HTML
-                html = f"""
-                <html>
-                <head>
-                    <style>
-                        body {{ font-family: Arial; margin: 40px; }}
-                        .page {{ page-break-after: always; border: 2px solid black; padding: 20px; }}
-                        table {{ border-collapse: collapse; width: 100%; }}
-                        th, td {{ border: 1px solid black; padding: 8px; text-align: center; }}
-                        th {{ background-color: #f2f2f2; }}
-                        .watermark {{ text-align: center; margin-top: 20px; font-size: 12px; color: gray; }}
-                    </style>
-                </head>
-                <body>
-                    <div class="page">
-                        <h1>CGPA Report</h1>
-                        <p><strong>Name:</strong> {user['Name']}<br>
-                           <strong>College:</strong> {user['College']}<br>
-                           <strong>Department:</strong> {user['Department']}<br>
-                           <strong>Entry Type:</strong> {user['Entry']}<br>
-                           <strong>Updated CGPA:</strong> {overall_cgpa:.2f}</p>
-                    </div>
-                """
-
-                for sem in sorted(df['Semester'].unique()):
-                    html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
-                    sem_data = df[df['Semester'] == sem][["Credit", "Score", "Grade", "Weighted"]]
-                    html += sem_data.to_html(index=False)
-                    html += "</div>"
-
-                html += """
-                    <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
-                </body></html>
-                """
-
-                components.html(html, height=800, scrolling=True)
-
-# Step 3: New CGPA calculation (no existing CGPA)
-if st.session_state.step == 2 and not st.session_state.existing_cgpa_path:
+# Step 2: Existing CGPA entry if applicable
+if st.session_state.step == 2:
     user = st.session_state.user_data
-    st.title("New CGPA Calculation")
+    if user["CGPAAvailable"] == "Yes":
+        st.header("Existing CGPA Details")
+        completed_sem = st.number_input("How many semesters completed?", min_value=1, max_value=10, step=1)
+        existing_cgpa = st.number_input("Enter your existing CGPA", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
+        earned_credits = st.number_input("Credits earned up to previous semesters", min_value=1, step=1)
 
-    start_sem, max_sem = get_semester_limits(user["Entry"])
+        if st.button("Continue to Balance Semesters"):
+            st.session_state.user_data.update({
+                "CompletedSemesters": completed_sem,
+                "ExistingCGPA": existing_cgpa,
+                "EarnedCredits": earned_credits
+            })
+            st.session_state.step = 3
+    else:
+        st.session_state.user_data.update({
+            "CompletedSemesters": 0,
+            "ExistingCGPA": 0.0,
+            "EarnedCredits": 0
+        })
+        st.session_state.step = 3
 
-    sem_limit = st.slider(f"Select number of semesters to enter (from {start_sem} to {max_sem})", min_value=1, max_value=max_sem - start_sem + 1, value=max_sem - start_sem + 1)
+# Step 3: CGPA Calculator
+if st.session_state.step == 3:
+    user = st.session_state.user_data
+    st.header("Enter Semester-wise Marks")
+
+    # Determine semester start and max
+    entry = user["EntryType"]
+    sem_start = 1 if "Lateral" not in entry else 3
+    sem_max = 8 if "Sandwich" not in entry else 10
+
+    available_sem = list(range(sem_start, sem_max + 1))
+    remaining = [i for i in available_sem if i > user["CompletedSemesters"]]
+
+    sem_count = len(remaining)
+    sem_limit = st.slider("Select number of semesters you want to enter", min_value=1, max_value=sem_count, value=sem_count)
 
     records = []
-    for sem in range(start_sem, start_sem + sem_limit):
+
+    for idx in range(sem_limit):
+        sem = remaining[idx]
         with st.expander(f"Semester {sem}"):
-            num_courses = st.number_input(f"Number of courses in Semester {sem}", min_value=1, step=1, value=5, key=f"courses_new_{sem}")
+            num_courses = st.number_input(f"Number of Courses in Semester {sem}", min_value=1, value=5, step=1, key=f"course_num_{sem}")
             for course in range(1, num_courses + 1):
                 col1, col2 = st.columns(2)
                 with col1:
-                    credit = st.selectbox(f"Course {course} Credit", options=[0,1,2,3,4], key=f"credit_new_{sem}_{course}")
+                    credit = st.selectbox(f"Course {course} Credit", [1, 2, 3, 4], key=f"credit_{sem}_{course}")
                 with col2:
-                    score = st.selectbox(f"Course {course} Score", options=list(range(5,11)), key=f"score_new_{sem}_{course}")
-                records.append({"Semester": sem, "Credit": credit, "Score": score})
+                    score = st.selectbox(f"Course {course} Score", list(range(5, 11)), key=f"score_{sem}_{course}")
+                records.append({"Semester": sem, "Credit": credit, "Score": score, "Grade": grade(score)})
 
-    if st.button("Calculate CGPA New"):
+    if st.button("Calculate CGPA"):
         df = pd.DataFrame(records)
         df["Weighted"] = df["Credit"] * df["Score"]
-        df["Grade"] = df["Score"].apply(get_grade)
 
-        total_credits = df["Credit"].sum()
-        total_weighted = df["Weighted"].sum()
+        total_new_credits = df["Credit"].sum()
+        total_new_weighted = df["Weighted"].sum()
 
-        overall_cgpa = total_weighted / total_credits if total_credits != 0 else 0
+        # Combine with existing CGPA if available
+        total_credits = user["EarnedCredits"] + total_new_credits
+        total_weighted = (user["ExistingCGPA"] * user["EarnedCredits"]) + total_new_weighted
+        overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
 
-        sem_stats = df.groupby("Semester").agg(Credits=("Credit", "sum"),
-                                               WeightedScore=("Weighted", "sum")).reset_index()
+        sem_stats = (
+            df.groupby("Semester")
+            .agg(Credits=("Credit", "sum"), WeightedScore=("Weighted", "sum"))
+            .reset_index()
+        )
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
-        st.success(f"**CGPA: {overall_cgpa:.2f}**")
+        st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
 
-        # Printable report HTML
+        st.subheader("Semester-wise GPA")
+        st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
+
+        st.subheader("Detailed Course Breakdown")
+        st.dataframe(df)
+
+        # Generate HTML report
         html = f"""
         <html>
         <head>
-            <style>
-                body {{ font-family: Arial; margin: 40px; }}
-                .page {{ page-break-after: always; border: 2px solid black; padding: 20px; }}
-                table {{ border-collapse: collapse; width: 100%; }}
-                th, td {{ border: 1px solid black; padding: 8px; text-align: center; }}
-                th {{ background-color: #f2f2f2; }}
-                .watermark {{ text-align: center; margin-top: 20px; font-size: 12px; color: gray; }}
-            </style>
+        <style>
+        body {{ font-family: Arial; margin: 40px; }}
+        h1, h2 {{ text-align: center; }}
+        .page {{ page-break-after: always; border: 2px solid black; padding: 20px; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th, td {{ border: 1px solid black; padding: 8px; text-align: center; }}
+        th {{ background-color: #f0f0f0; }}
+        .watermark {{ position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 10px; color: gray; }}
+        </style>
         </head>
         <body>
-            <div class="page">
-                <h1>CGPA Report</h1>
-                <p><strong>Name:</strong> {user['Name']}<br>
-                   <strong>College:</strong> {user['College']}<br>
-                   <strong>Department:</strong> {user['Department']}<br>
-                   <strong>Entry Type:</strong> {user['Entry']}<br>
-                   <strong>CGPA:</strong> {overall_cgpa:.2f}</p>
-            </div>
+        <div class="page">
+            <h1>CGPA Report</h1>
+            <p><strong>Name:</strong> {user['Name']}<br>
+            <strong>College:</strong> {user['College']}<br>
+            <strong>Department:</strong> {user['Department']}<br>
+            <strong>Entry Type:</strong> {user['EntryType']}<br>
+            <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+        </div>
+        <div class="page">
+            <h2>Semester-wise GPA</h2>
+            {sem_stats.to_html(index=False)}
+        </div>
         """
 
         for sem in sorted(df['Semester'].unique()):
-            html += f"<div class='page'><h2>Semester {sem} Breakdown</h2>"
             sem_data = df[df['Semester'] == sem][["Credit", "Score", "Grade", "Weighted"]]
-            html += sem_data.to_html(index=False)
-            html += "</div>"
+            html += f"<div class='page'><h2>Semester {sem} Details</h2>{sem_data.to_html(index=False)}</div>"
 
         html += """
-            <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
+        <div class='watermark'>Disclaimer! This CGPA was calculated based on data fed by student</div>
         </body></html>
         """
 
-        components.html(html, height=800, scrolling=True)
+        st.components.v1.html(html, height=900, scrolling=True)
