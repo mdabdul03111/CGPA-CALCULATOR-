@@ -19,7 +19,7 @@ def grade(score):
         7: 'B+', 6: 'B', 5: 'C'
     }.get(score, '')
 
-# Title
+# Welcome message
 st.title("CGPA Calculator")
 st.markdown("#### Welcome! This tool helps you calculate your CGPA accurately.")
 
@@ -76,7 +76,7 @@ if st.session_state.step == 3:
     user = st.session_state.user_data
     st.header("Enter Semester-wise Marks")
 
-    # Determine semester start and max
+    # Determine semester range
     entry = user["EntryType"]
     sem_start = 1 if "Lateral" not in entry else 3
     sem_max = 8 if "Sandwich" not in entry else 10
@@ -85,16 +85,21 @@ if st.session_state.step == 3:
     remaining = [i for i in available_sem if i > user["CompletedSemesters"]]
     sem_count = len(remaining)
 
-    if sem_count < 0:
+    if sem_count < 1:
         st.warning("All semesters are already completed. No more semesters left to enter.")
         st.stop()
 
-    sem_limit = st.slider(
-        "Select number of semesters you want to enter",
-        min_value=1,
-        max_value=sem_count,
-        value=sem_count
-    )
+    # Fix: Avoid Streamlit slider crash when min=max=1
+    if sem_count == 1:
+        st.info("Only one semester left to enter.")
+        sem_limit = 1
+    else:
+        sem_limit = st.slider(
+            "Select number of semesters you want to enter",
+            min_value=1,
+            max_value=sem_count,
+            value=sem_count
+        )
 
     records = []
 
@@ -117,6 +122,7 @@ if st.session_state.step == 3:
         total_new_credits = df["Credit"].sum()
         total_new_weighted = df["Weighted"].sum()
 
+        # Combine with existing CGPA if available
         total_credits = user["EarnedCredits"] + total_new_credits
         total_weighted = (user["ExistingCGPA"] * user["EarnedCredits"]) + total_new_weighted
         overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
