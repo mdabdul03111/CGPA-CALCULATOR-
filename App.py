@@ -21,16 +21,19 @@ st.markdown(
     "<h1 style='text-align: center; color: #007acc;'>CGPA Calculator</h1>",
     unsafe_allow_html=True
 )
-st.markdown("<p style='text-align: center; color: #333;'>Welcome! This tool helps you calculate your CGPA accurately and professionally.</p>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align: center; color: #333;'>Welcome! This tool helps you calculate your CGPA professionally.</p>",
+    unsafe_allow_html=True
+)
 
 # Step 1: User Info
 if st.session_state.step == 1:
-    st.header("Enter Your Details")
-    name = st.text_input("Name")
-    college = st.text_input("College")
+    st.subheader("Step 1: Enter Your Details")
+    name = st.text_input("Full Name")
+    college = st.text_input("College Name")
     department = st.text_input("Department")
     entry_type = st.selectbox("Entry Type", ["Regular", "Lateral", "Sandwich - Regular", "Sandwich - Lateral"])
-    cgpa_available = st.radio("Do you already have an existing CGPA?", ["No", "Yes"])
+    cgpa_available = st.radio("Do you already have a CGPA?", ["No", "Yes"])
 
     if st.button("Proceed"):
         if all([name, college, department]):
@@ -43,18 +46,18 @@ if st.session_state.step == 1:
             }
             st.session_state.step = 2
         else:
-            st.warning("Please complete all fields.")
+            st.warning("Please fill all the required fields.")
 
 # Step 2: Existing CGPA
 if st.session_state.step == 2:
     user = st.session_state.user_data
     if user["CGPAAvailable"] == "Yes":
-        st.header("Existing CGPA Details")
-        completed_sem = st.number_input("How many semesters completed?", min_value=0, max_value=10, step=1)
-        existing_cgpa = st.number_input("Enter your existing CGPA", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
-        earned_credits = st.number_input("Credits earned up to previous semesters", min_value=1, step=1)
+        st.subheader("Step 2: Existing CGPA Details")
+        completed_sem = st.number_input("Number of Semesters Completed", min_value=0, max_value=10, step=1)
+        existing_cgpa = st.number_input("Your Existing CGPA", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
+        earned_credits = st.number_input("Total Earned Credits", min_value=1, step=1)
 
-        if st.button("Continue to Balance Semesters"):
+        if st.button("Continue"):
             st.session_state.user_data.update({
                 "CompletedSemesters": completed_sem,
                 "ExistingCGPA": existing_cgpa,
@@ -72,7 +75,7 @@ if st.session_state.step == 2:
 # Step 3: CGPA Calculation
 if st.session_state.step == 3:
     user = st.session_state.user_data
-    st.header("Enter Semester-wise Marks")
+    st.subheader("Step 3: Enter Semester-wise Marks")
 
     entry = user["EntryType"]
     sem_start = 1 if "Lateral" not in entry else 3
@@ -82,11 +85,11 @@ if st.session_state.step == 3:
     sem_count = len(remaining)
 
     if sem_count < 1:
-        st.warning("All semesters are already completed. No more semesters left to enter.")
+        st.warning("All semesters are already completed.")
         st.stop()
 
-    sem_limit = 1 if sem_count == 1 else st.slider(
-        "Select number of semesters you want to enter",
+    sem_limit = st.slider(
+        "Number of Semesters to Enter",
         min_value=1,
         max_value=sem_count,
         value=sem_count
@@ -122,7 +125,7 @@ if st.session_state.step == 3:
         ).reset_index()
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
-        st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
+        st.success(f"**Your Overall CGPA: {overall_cgpa:.2f}**")
         st.subheader("Semester-wise GPA")
         st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
         st.subheader("Detailed Course Breakdown")
@@ -133,18 +136,9 @@ if st.session_state.step == 3:
         <head>
         <style>
             body {{
-                font-family: 'Times New Roman';
+                font-family: 'Times New Roman', serif;
                 background-color: #f4faff;
-                text-align: center;
                 margin: 30px;
-            }}
-            h1 {{
-                font-family: Arial, sans-serif;
-                color: #004a7c;
-            }}
-            h2 {{
-                font-family: Arial, sans-serif;
-                color: #004a7c;
             }}
             .page {{
                 page-break-after: always;
@@ -152,20 +146,24 @@ if st.session_state.step == 3:
                 padding: 20px;
                 border-radius: 10px;
                 background-color: white;
+                margin-bottom: 30px;
             }}
-            table {{
-                width: 80%;
-                margin: 0 auto;
-                border-collapse: collapse;
-                font-family: 'Times New Roman';
-            }}
-            th, td {{
-                border: 1px solid #ccc;
-                padding: 8px;
+            h1, h2 {{
+                color: #004a7c;
                 text-align: center;
             }}
+            table {{
+                width: 90%;
+                margin: 20px auto;
+                border-collapse: collapse;
+            }}
+            th, td {{
+                border: 1px solid #999;
+                padding: 8px 12px;
+                text-align: left;
+            }}
             th {{
-                background-color: #dceefc;
+                background-color: #e3f1fc;
             }}
             .btn-print {{
                 display: block;
@@ -177,7 +175,6 @@ if st.session_state.step == 3:
                 font-size: 16px;
                 border-radius: 5px;
                 cursor: pointer;
-                font-family: Arial, sans-serif;
             }}
             .watermark {{
                 text-align: center;
@@ -204,7 +201,7 @@ if st.session_state.step == 3:
                     <tr><th>Existing CGPA</th><td>{user['ExistingCGPA'] if user['CGPAAvailable'] == 'Yes' else 'N/A'}</td></tr>
                     <tr><th>Earned Credits</th><td>{user['EarnedCredits']}</td></tr>
                     <tr><th>New Credits</th><td>{total_new_credits}</td></tr>
-                    <tr><th><strong>Overall Credits</strong></th><td><strong>{total_credits}</strong></td></tr>
+                    <tr><th>Total Credits</th><td>{total_credits}</td></tr>
                     <tr><th><strong>Overall CGPA</strong></th><td><strong>{overall_cgpa:.2f}</strong></td></tr>
                 </table>
             </div>
@@ -223,4 +220,4 @@ if st.session_state.step == 3:
         </body></html>
         """
 
-        st.components.v1.html(html, height=1000, scrolling=True)
+        st.components.v1.html(html, height=1100, scrolling=True)
