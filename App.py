@@ -3,6 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
+# Session state setup
 if "user_submitted" not in st.session_state:
     st.session_state.user_submitted = False
 if "user_data" not in st.session_state:
@@ -17,11 +18,29 @@ def grade(score):
     }.get(score, '')
 
 # Title
-st.markdown(
-    "<h1 style='text-align: center; color: #007acc;'>CGPA Calculator</h1>",
-    unsafe_allow_html=True
-)
-st.markdown("<p style='text-align: center; color: #333;'>Welcome! This tool helps you calculate your CGPA accurately and professionally.</p>", unsafe_allow_html=True)
+st.markdown("""
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+        .main-title {
+            text-align: center;
+            font-size: 38px;
+            color: #003366;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+        }
+        .sub-title {
+            text-align: center;
+            font-size: 16px;
+            color: #444;
+            margin-bottom: 20px;
+            font-family: 'Arial', sans-serif;
+        }
+    </style>
+    <div class="main-title">CGPA Calculator</div>
+    <div class="sub-title">Welcome! This tool helps you calculate your CGPA accurately and professionally.</div>
+""", unsafe_allow_html=True)
 
 # Step 1: User Info
 if st.session_state.step == 1:
@@ -128,60 +147,56 @@ if st.session_state.step == 3:
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
+        # Styled HTML Output
         html = f"""
         <html>
         <head>
         <style>
             body {{
-                font-family: 'Times New Roman';
-                background-color: #f4faff;
-                text-align: center;
+                font-family: 'Georgia', serif;
+                background-color: #f7f9fc;
                 margin: 30px;
+                text-align: center;
             }}
-            h1 {{
-                font-family: Arial, sans-serif;
-                color: #004a7c;
-            }}
-            h2 {{
-                font-family: Arial, sans-serif;
-                color: #004a7c;
+            h1, h2 {{
+                color: #003366;
             }}
             .page {{
                 page-break-after: always;
-                border: 3px solid #007acc;
-                padding: 20px;
-                border-radius: 10px;
-                background-color: white;
+                border: 2px solid #003366;
+                padding: 25px;
+                border-radius: 12px;
+                background-color: #ffffff;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
             }}
             table {{
-                width: 80%;
+                width: 90%;
                 margin: 0 auto;
                 border-collapse: collapse;
-                font-family: 'Times New Roman';
+                font-family: 'Arial', sans-serif;
+                font-size: 14px;
             }}
             th, td {{
                 border: 1px solid #ccc;
-                padding: 8px;
+                padding: 10px;
                 text-align: center;
             }}
             th {{
-                background-color: #dceefc;
+                background-color: #e9f3fe;
             }}
             .btn-print {{
-                display: block;
-                margin: 20px auto;
+                margin: 20px;
                 padding: 10px 20px;
-                background: #007acc;
+                background: #003366;
                 color: white;
                 border: none;
                 font-size: 16px;
                 border-radius: 5px;
                 cursor: pointer;
-                font-family: Arial, sans-serif;
             }}
             .watermark {{
-                text-align: center;
-                font-size: 12px;
+                font-size: 11px;
                 color: gray;
                 margin-top: 40px;
             }}
