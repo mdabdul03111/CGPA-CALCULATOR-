@@ -16,7 +16,7 @@ def grade(score):
         7: 'B+', 6: 'B', 5: 'C'
     }.get(score, '')
 
-# Title Section
+# Title
 st.markdown(
     "<h1 style='text-align: center; color: #007acc;'>CGPA Calculator</h1>",
     unsafe_allow_html=True
@@ -132,14 +132,59 @@ if st.session_state.step == 3:
         <html>
         <head>
         <style>
-            body {{ font-family: Arial; margin: 30px; background-color: #f4faff; }}
-            h1, h2 {{ color: #004a7c; text-align: center; }}
-            .page {{ page-break-after: always; border: 3px solid #007acc; padding: 20px; border-radius: 10px; background-color: white; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
-            th {{ background-color: #dceefc; width: 30%; }}
-            .btn-print {{ display: block; margin: 20px auto; padding: 10px 20px; background: #007acc; color: white; border: none; font-size: 16px; border-radius: 5px; cursor: pointer; }}
-            .watermark {{ text-align: center; font-size: 12px; color: gray; margin-top: 40px; }}
+            body {{
+                font-family: 'Times New Roman';
+                background-color: #f4faff;
+                text-align: center;
+                margin: 30px;
+            }}
+            h1 {{
+                font-family: Arial, sans-serif;
+                color: #004a7c;
+            }}
+            h2 {{
+                font-family: Arial, sans-serif;
+                color: #004a7c;
+            }}
+            .page {{
+                page-break-after: always;
+                border: 3px solid #007acc;
+                padding: 20px;
+                border-radius: 10px;
+                background-color: white;
+            }}
+            table {{
+                width: 80%;
+                margin: 0 auto;
+                border-collapse: collapse;
+                font-family: 'Times New Roman';
+            }}
+            th, td {{
+                border: 1px solid #ccc;
+                padding: 8px;
+                text-align: center;
+            }}
+            th {{
+                background-color: #dceefc;
+            }}
+            .btn-print {{
+                display: block;
+                margin: 20px auto;
+                padding: 10px 20px;
+                background: #007acc;
+                color: white;
+                border: none;
+                font-size: 16px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-family: Arial, sans-serif;
+            }}
+            .watermark {{
+                text-align: center;
+                font-size: 12px;
+                color: gray;
+                margin-top: 40px;
+            }}
         </style>
         <script>
             function printPage() {{
@@ -158,7 +203,9 @@ if st.session_state.step == 3:
                     <tr><th>Entry Type</th><td>{user['EntryType']}</td></tr>
                     <tr><th>Existing CGPA</th><td>{user['ExistingCGPA'] if user['CGPAAvailable'] == 'Yes' else 'N/A'}</td></tr>
                     <tr><th>Earned Credits</th><td>{user['EarnedCredits']}</td></tr>
-                    <tr><th>Overall CGPA</th><td><strong>{overall_cgpa:.2f}</strong></td></tr>
+                    <tr><th>New Credits</th><td>{total_new_credits}</td></tr>
+                    <tr><th><strong>Overall Credits</strong></th><td><strong>{total_credits}</strong></td></tr>
+                    <tr><th><strong>Overall CGPA</strong></th><td><strong>{overall_cgpa:.2f}</strong></td></tr>
                 </table>
             </div>
             <div class="page">
@@ -172,7 +219,7 @@ if st.session_state.step == 3:
             html += f"<div class='page'><h2>Semester {sem} Details</h2>{sem_data.to_html(index=False)}</div>"
 
         html += """
-        <div class='watermark'>Disclaimer: This CGPA was calculated based on data provided by the student.</div>
+            <div class='watermark'>Disclaimer: This CGPA was calculated based on data provided by the student.</div>
         </body></html>
         """
 
