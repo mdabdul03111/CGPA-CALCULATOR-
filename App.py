@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Set up Streamlit page
-st.set_page_config(page_title="CGPA Calculator", layout="centered", page_icon="🎓")
+st.set_page_config(page_title="CGPA Calculator", layout="centered")
 
 # Initialize session state
 if "user_submitted" not in st.session_state:
@@ -19,41 +19,51 @@ def grade(score):
         7: 'B+', 6: 'B', 5: 'C'
     }.get(score, '')
 
-# Custom CSS for professional colors and fonts
-st.markdown("""
+# Custom CSS for Streamlit UI colors & fonts
+st.markdown(
+    """
     <style>
-    body, .css-18e3th9 {
+    /* Streamlit page background */
+    .main {
+        background-color: #f5f7fa;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f0f4f8;
-        color: #1e293b;
+        color: #333333;
     }
-    .stButton>button {
-        background-color: #2563eb;
-        color: white;
-        font-weight: 600;
-        border-radius: 8px;
-        padding: 10px 24px;
-        border: none;
-        transition: background-color 0.3s ease;
-    }
-    .stButton>button:hover {
-        background-color: #1e40af;
-        cursor: pointer;
-    }
-    .stTextInput>div>input, .stSelectbox>div>div>div>select {
-        border-radius: 6px;
-        border: 1.5px solid #2563eb;
-        padding: 6px;
-        font-size: 14px;
-    }
-    h1, h2, h3, h4 {
-        color: #0f172a;
+    /* Headers */
+    h1, h2, h3 {
+        color: #004d99;
         font-weight: 700;
     }
+    /* Button styling */
+    div.stButton > button {
+        background-color: #007acc;
+        color: white;
+        border-radius: 8px;
+        padding: 8px 20px;
+        font-weight: 600;
+        border: none;
+    }
+    div.stButton > button:hover {
+        background-color: #005f99;
+        cursor: pointer;
+    }
+    /* Input fields */
+    input, select {
+        border: 1.5px solid #007acc;
+        border-radius: 5px;
+        padding: 5px;
+        font-size: 14px;
+    }
+    /* Dataframe style */
+    .dataframe th {
+        background-color: #e1ecf9 !important;
+        color: #004d99 !important;
+    }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-# Title and welcome message
 st.title("CGPA Calculator")
 st.markdown("#### Welcome! This tool helps you calculate your CGPA accurately.")
 
@@ -123,6 +133,7 @@ if st.session_state.step == 3:
         st.warning("All semesters are already completed. No more semesters left to enter.")
         st.stop()
 
+    # Avoid Streamlit slider crash when min=max=1
     if sem_count == 1:
         st.info("Only one semester left to enter.")
         sem_limit = 1
@@ -169,61 +180,65 @@ if st.session_state.step == 3:
 
         st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
 
-        # Report HTML with print functionality
-        report_html = f"""
+        st.subheader("Semester-wise GPA")
+        st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
+
+        st.subheader("Detailed Course Breakdown")
+        st.dataframe(df)
+
+        # Generate clean HTML report
+        html = f"""
         <style>
-        @media print {{
-            body * {{
-                visibility: hidden;
-            }}
-            #printable-area, #printable-area * {{
-                visibility: visible;
-            }}
             #printable-area {{
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                background-color: white;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 20px;
+                color: #333;
             }}
-        }}
-        .page {{
-            page-break-after: always;
-            border: 2px solid #2563eb;
-            padding: 20px;
-            margin: 20px 0;
-            background-color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #1e293b;
-        }}
-        h1, h2 {{
-            color: #0f172a;
-            text-align: center;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }}
-        th, td {{
-            border: 1px solid #2563eb;
-            padding: 8px;
-            text-align: center;
-        }}
-        th {{
-            background-color: #2563eb;
-            color: white;
-        }}
-        .watermark {{
-            position: fixed;
-            bottom: 10px;
-            width: 100%;
-            text-align: center;
-            font-size: 10px;
-            color: gray;
-        }}
+            .page {{
+                border: 2px solid #007acc;
+                padding: 20px;
+                margin-bottom: 30px;
+                page-break-after: always;
+            }}
+            h1, h2 {{
+                color: #004d99;
+                font-weight: 700;
+                text-align: center;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }}
+            th, td {{
+                border: 1px solid #007acc;
+                padding: 8px;
+                text-align: center;
+            }}
+            th {{
+                background-color: #cce6ff;
+            }}
+            .watermark {{
+                font-size: 12px;
+                color: gray;
+                text-align: center;
+                margin-top: 40px;
+                font-style: italic;
+            }}
+            @media print {{
+                body * {{
+                    visibility: hidden;
+                }}
+                #printable-area, #printable-area * {{
+                    visibility: visible;
+                }}
+                #printable-area {{
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                }}
+            }}
         </style>
 
         <div id="printable-area">
@@ -235,6 +250,7 @@ if st.session_state.step == 3:
                 <strong>Entry Type:</strong> {user['EntryType']}<br>
                 <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
             </div>
+
             <div class="page">
                 <h2>Semester-wise GPA</h2>
                 {sem_stats.to_html(index=False)}
@@ -243,40 +259,39 @@ if st.session_state.step == 3:
 
         for sem in sorted(df['Semester'].unique()):
             sem_data = df[df['Semester'] == sem][["Credit", "Score", "Grade", "Weighted"]]
-            report_html += f"""
+            html += f"""
             <div class="page">
                 <h2>Semester {sem} Details</h2>
                 {sem_data.to_html(index=False)}
             </div>
             """
 
-        report_html += """
+        html += """
             <div class="watermark">Disclaimer! This CGPA was calculated based on data fed by student</div>
         </div>
         """
 
-        st.markdown(report_html, unsafe_allow_html=True)
+        # Display the report HTML with print button
+        st.markdown(
+            """
+            <script>
+            function printReport() {
+                window.print();
+            }
+            </script>
+            <div style="text-align:center; margin:20px;">
+                <button onclick="printReport()" style="
+                    background-color: #007acc;
+                    color: white;
+                    border: none;
+                    padding: 10px 25px;
+                    font-size: 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                ">Print Report</button>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        st.markdown("""
-        <button onclick="printDiv('printable-area')" style="
-            background-color:#2563eb;
-            color:white;
-            font-weight:600;
-            border:none;
-            padding:12px 28px;
-            border-radius:8px;
-            cursor:pointer;
-            margin-top:20px;
-        ">Print Report</button>
-
-        <script>
-        function printDiv(divId) {
-            var printContents = document.getElementById(divId).innerHTML;
-            var originalContents = document.body.innerHTML;
-            document.body.innerHTML = printContents;
-            window.print();
-            document.body.innerHTML = originalContents;
-            window.location.reload();
-        }
-        </script>
-        """, unsafe_allow_html=True)
+        st.markdown(html, unsafe_allow_html=True)
