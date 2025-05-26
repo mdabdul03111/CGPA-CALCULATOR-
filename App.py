@@ -19,7 +19,7 @@ def grade(score):
         7: 'B+', 6: 'B', 5: 'C'
     }.get(score, '')
 
-# Welcome message (not printed)
+# Title
 st.title("CGPA Calculator")
 st.markdown("#### Welcome! This tool helps you calculate your CGPA accurately.")
 
@@ -52,7 +52,7 @@ if st.session_state.step == 2:
     user = st.session_state.user_data
     if user["CGPAAvailable"] == "Yes":
         st.header("Existing CGPA Details")
-        completed_sem = st.number_input("How many semesters completed?", min_value=1, max_value=10, step=1)
+        completed_sem = st.number_input("How many semesters completed?", min_value=0, max_value=10, step=1)
         existing_cgpa = st.number_input("Enter your existing CGPA", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
         earned_credits = st.number_input("Credits earned up to previous semesters", min_value=1, step=1)
 
@@ -83,23 +83,23 @@ if st.session_state.step == 3:
 
     available_sem = list(range(sem_start, sem_max + 1))
     remaining = [i for i in available_sem if i > user["CompletedSemesters"]]
-
     sem_count = len(remaining)
 
-    # If no remaining semesters, still allow user to enter at least 1 semester
-    slider_max = sem_count if sem_count > 0 else 1
+    if sem_count < 0:
+        st.warning("All semesters are already completed. No more semesters left to enter.")
+        st.stop()
 
     sem_limit = st.slider(
         "Select number of semesters you want to enter",
         min_value=1,
-        max_value=slider_max,
-        value=slider_max,
+        max_value=sem_count,
+        value=sem_count
     )
 
     records = []
 
     for idx in range(sem_limit):
-        sem = remaining[idx] if sem_count > 0 else user["CompletedSemesters"] + 1
+        sem = remaining[idx]
         with st.expander(f"Semester {sem}"):
             num_courses = st.number_input(f"Number of Courses in Semester {sem}", min_value=1, value=5, step=1, key=f"course_num_{sem}")
             for course in range(1, num_courses + 1):
@@ -117,7 +117,6 @@ if st.session_state.step == 3:
         total_new_credits = df["Credit"].sum()
         total_new_weighted = df["Weighted"].sum()
 
-        # Combine with existing CGPA if available
         total_credits = user["EarnedCredits"] + total_new_credits
         total_weighted = (user["ExistingCGPA"] * user["EarnedCredits"]) + total_new_weighted
         overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
