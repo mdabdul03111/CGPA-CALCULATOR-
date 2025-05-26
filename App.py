@@ -16,12 +16,14 @@ def grade(score):
         7: 'B+', 6: 'B', 5: 'C'
     }.get(score, '')
 
+# Title Section
 st.markdown(
-    "<h1 style='text-align: center; color: #4A90E2;'>CGPA Calculator</h1>",
+    "<h1 style='text-align: center; color: #007acc;'>CGPA Calculator</h1>",
     unsafe_allow_html=True
 )
-st.markdown("<p style='text-align: center;'>Welcome! This tool helps you calculate your CGPA accurately.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #333;'>Welcome! This tool helps you calculate your CGPA accurately and professionally.</p>", unsafe_allow_html=True)
 
+# Step 1: User Info
 if st.session_state.step == 1:
     st.header("Enter Your Details")
     name = st.text_input("Name")
@@ -43,6 +45,7 @@ if st.session_state.step == 1:
         else:
             st.warning("Please complete all fields.")
 
+# Step 2: Existing CGPA
 if st.session_state.step == 2:
     user = st.session_state.user_data
     if user["CGPAAvailable"] == "Yes":
@@ -66,6 +69,7 @@ if st.session_state.step == 2:
         })
         st.session_state.step = 3
 
+# Step 3: CGPA Calculation
 if st.session_state.step == 3:
     user = st.session_state.user_data
     st.header("Enter Semester-wise Marks")
@@ -128,13 +132,13 @@ if st.session_state.step == 3:
         <html>
         <head>
         <style>
-            body {{ font-family: Arial; margin: 30px; background-color: #f9f9f9; }}
-            h1, h2 {{ color: #2c3e50; text-align: center; }}
-            .page {{ page-break-after: always; border: 3px solid #4A90E2; padding: 20px; border-radius: 10px; background-color: white; }}
+            body {{ font-family: Arial; margin: 30px; background-color: #f4faff; }}
+            h1, h2 {{ color: #004a7c; text-align: center; }}
+            .page {{ page-break-after: always; border: 3px solid #007acc; padding: 20px; border-radius: 10px; background-color: white; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: center; }}
-            th {{ background-color: #dceefc; }}
-            .btn-print {{ display: block; margin: 20px auto; padding: 10px 20px; background: #4A90E2; color: white; border: none; font-size: 16px; border-radius: 5px; cursor: pointer; }}
+            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; }}
+            th {{ background-color: #dceefc; width: 30%; }}
+            .btn-print {{ display: block; margin: 20px auto; padding: 10px 20px; background: #007acc; color: white; border: none; font-size: 16px; border-radius: 5px; cursor: pointer; }}
             .watermark {{ text-align: center; font-size: 12px; color: gray; margin-top: 40px; }}
         </style>
         <script>
@@ -147,11 +151,15 @@ if st.session_state.step == 3:
             <button class="btn-print" onclick="printPage()">Print Report</button>
             <div class="page">
                 <h1>CGPA Report</h1>
-                <p><strong>Name:</strong> {user['Name']}<br>
-                <strong>College:</strong> {user['College']}<br>
-                <strong>Department:</strong> {user['Department']}<br>
-                <strong>Entry Type:</strong> {user['EntryType']}<br>
-                <strong>Overall CGPA:</strong> {overall_cgpa:.2f}</p>
+                <table>
+                    <tr><th>Name</th><td>{user['Name']}</td></tr>
+                    <tr><th>College</th><td>{user['College']}</td></tr>
+                    <tr><th>Department</th><td>{user['Department']}</td></tr>
+                    <tr><th>Entry Type</th><td>{user['EntryType']}</td></tr>
+                    <tr><th>Existing CGPA</th><td>{user['ExistingCGPA'] if user['CGPAAvailable'] == 'Yes' else 'N/A'}</td></tr>
+                    <tr><th>Earned Credits</th><td>{user['EarnedCredits']}</td></tr>
+                    <tr><th>Overall CGPA</th><td><strong>{overall_cgpa:.2f}</strong></td></tr>
+                </table>
             </div>
             <div class="page">
                 <h2>Semester-wise GPA</h2>
@@ -168,5 +176,4 @@ if st.session_state.step == 3:
         </body></html>
         """
 
-        # Embed the report in Streamlit
         st.components.v1.html(html, height=1000, scrolling=True)
