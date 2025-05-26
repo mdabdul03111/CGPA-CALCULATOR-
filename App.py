@@ -1,8 +1,24 @@
 import streamlit as st
 import pandas as pd
 
-# Set up Streamlit page
+# Set page configuration
 st.set_page_config(page_title="CGPA Calculator", layout="centered")
+
+# Apply Custom UI Styles
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #f5faff;
+    }
+    h1, h2, h3, .stMarkdown {
+        color: #003366;
+    }
+    .css-1v0mbdj p {
+        font-size: 18px;
+        color: #333;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if "user_submitted" not in st.session_state:
@@ -47,13 +63,13 @@ if st.session_state.step == 1:
         else:
             st.warning("Please complete all fields.")
 
-# Step 2: Existing CGPA entry if applicable
+# Step 2: Existing CGPA entry
 if st.session_state.step == 2:
     user = st.session_state.user_data
     if user["CGPAAvailable"] == "Yes":
         st.header("Existing CGPA Details")
         completed_sem = st.number_input("How many semesters completed?", min_value=0, max_value=10, step=1)
-        existing_cgpa = st.number_input("Enter your existing CGPA", min_value=1.0, max_value=10.0, step=0.01, format="%.2f")
+        existing_cgpa = st.number_input("Enter your existing CGPA", min_value=0.0, max_value=10.0, step=0.01, format="%.2f")
         earned_credits = st.number_input("Credits earned up to previous semesters", min_value=1, step=1)
 
         if st.button("Continue to Balance Semesters"):
@@ -76,7 +92,6 @@ if st.session_state.step == 3:
     user = st.session_state.user_data
     st.header("Enter Semester-wise Marks")
 
-    # Determine semester range
     entry = user["EntryType"]
     sem_start = 1 if "Lateral" not in entry else 3
     sem_max = 8 if "Sandwich" not in entry else 10
@@ -86,23 +101,17 @@ if st.session_state.step == 3:
     sem_count = len(remaining)
 
     if sem_count < 1:
-        st.warning("All semesters are already completed. No more semesters left to enter.")
+        st.warning("All semesters are already completed.")
         st.stop()
 
-    # Fix: Avoid Streamlit slider crash when min=max=1
-    if sem_count == 1:
-        st.info("Only one semester left to enter.")
-        sem_limit = 1
-    else:
-        sem_limit = st.slider(
-            "Select number of semesters you want to enter",
-            min_value=1,
-            max_value=sem_count,
-            value=sem_count
-        )
+    sem_limit = 1 if sem_count == 1 else st.slider(
+        "Select number of semesters you want to enter",
+        min_value=1,
+        max_value=sem_count,
+        value=sem_count
+    )
 
     records = []
-
     for idx in range(sem_limit):
         sem = remaining[idx]
         with st.expander(f"Semester {sem}"):
@@ -122,7 +131,6 @@ if st.session_state.step == 3:
         total_new_credits = df["Credit"].sum()
         total_new_weighted = df["Weighted"].sum()
 
-        # Combine with existing CGPA if available
         total_credits = user["EarnedCredits"] + total_new_credits
         total_weighted = (user["ExistingCGPA"] * user["EarnedCredits"]) + total_new_weighted
         overall_cgpa = total_weighted / total_credits if total_credits > 0 else 0.0
@@ -135,25 +143,45 @@ if st.session_state.step == 3:
         sem_stats["GPA"] = sem_stats["WeightedScore"] / sem_stats["Credits"]
 
         st.success(f"**Overall CGPA: {overall_cgpa:.2f}**")
-
         st.subheader("Semester-wise GPA")
         st.dataframe(sem_stats[["Semester", "Credits", "GPA"]])
-
         st.subheader("Detailed Course Breakdown")
         st.dataframe(df)
 
-        # Generate HTML report
+        # Colorful HTML report
         html = f"""
         <html>
         <head>
         <style>
-        body {{ font-family: Arial; margin: 40px; }}
-        h1, h2 {{ text-align: center; }}
-        .page {{ page-break-after: always; border: 2px solid black; padding: 20px; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th, td {{ border: 1px solid black; padding: 8px; text-align: center; }}
-        th {{ background-color: #f0f0f0; }}
-        .watermark {{ position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 10px; color: gray; }}
+        body {{ font-family: Arial; margin: 40px; background-color: #fff; color: #000; }}
+        h1, h2 {{ text-align: center; color: #003366; }}
+        .page {{
+            page-break-after: always;
+            border: 2px solid #003366;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th, td {{
+            border: 1px solid #003366;
+            padding: 8px;
+            text-align: center;
+        }}
+        th {{
+            background-color: #e6f2ff;
+        }}
+        .watermark {{
+            position: fixed;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            color: gray;
+        }}
         </style>
         </head>
         <body>
@@ -180,4 +208,15 @@ if st.session_state.step == 3:
         </body></html>
         """
 
+        # Display Report
         st.components.v1.html(html, height=900, scrolling=True)
+
+        # Add Print Button
+        st.markdown("""
+            <br>
+            <center>
+            <button onclick="window.print()" style="background-color:#4CAF50; color:white; padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer;">
+                Print Report
+            </button>
+            </center>
+        """, unsafe_allow_html=True)
